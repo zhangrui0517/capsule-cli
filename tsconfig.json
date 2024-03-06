@@ -1,0 +1,61 @@
+{
+    // 这是 TypeScript 配置文件
+    "compilerOptions": {
+     /* 是否删除注释 */
+     "removeComments": true,
+     /* 是否启用严格模式 */
+     "strict": true,
+     /* 在代码中注入'use strict' */
+     "alwaysStrict": true,
+     /* 检查是否有未使用的变量 */
+     "noUnusedLocals": true,
+     /* 检查是否有参数未使用 */
+     "noUnusedParameters": true,
+     /* 检查函数是否没有有效返回 */
+     "noImplicitReturns": true,
+      // 指定编译目标版本
+      // 此处设置为 es2020，表示编译为 ES2020 代码，可运行在大多数 Node.js 版本上
+      "target": "es2020",
+      // 指定模块类型
+      // 此处设置为 esmodule，表示使用 ESM 模块规范
+      "module": "ESNext",
+      // 指定要包含的库文件
+      // 此处包含 es2020 和 dom 库，用于支持 ES2020 和 DOM API
+      "lib": ["es2020", "dom"],
+      // 指定编译输出目录
+      // 此处设置为 ./dist，表示将编译后的代码输出到 dist 目录
+      "outDir": "./lib",
+      // 指定源代码目录
+      // 此处设置为 ./src，表示源代码位于 src 目录
+      "rootDir": "./src",
+      // 指定是否生成类型声明文件
+      // 此处设置为 true，表示生成 *.d.ts 文件
+      "declaration": true,
+      // 启用严格模式，不允许隐式推断 any 类型
+      "noImplicitAny": false,
+      // 启用模块互操作性，允许在 ESM 模块中使用 CommonJS 模块
+      "esModuleInterop": true,
+      // 允许使用合成默认导入
+      "allowSyntheticDefaultImports": true,
+      // 启用严格空值检查，避免空值与非空值的意外比较
+      "strictNullChecks": false,
+      // 启用严格函数类型检查，避免函数参数和返回值类型的意外赋值
+      "strictFunctionTypes": false,
+      // 跳过对库文件的类型检查
+      "skipLibCheck": true,
+      // 强制文件名大小写一致
+      "forceConsistentCasingInFileNames": true,
+      /* 模块导入语句的解析 */
+      "moduleResolution": "Node"
+    },
+    // 要包含的 TypeScript 文件
+    "include": [
+      "./src/**/*.ts"
+    ],
+    // 要排除的文件
+    "exclude": [
+      "node_modules",
+      "dist"
+    ]
+  }
+  

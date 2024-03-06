@@ -1,0 +1,53 @@
+# 忽略项目生成的构建产物
+dist/
+build/
+
+# 忽略开发环境相关的IDE和编辑器配置
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# 忽略测试和本地开发时的临时文件
+test/
+tests/
+spec/
+coverage/
+reports/
+
+# 忽略日志文件
+logs/
+
+# 忽略源码地图文件
+*.map
+
+# 忽略node_modules，因为这些在安装包时会重新生成
+node_modules/
+
+# 忽略私密环境变量文件
+.env
+.env.example
+.env.local
+.secrets.*
+
+# 忽略Git相关的文件（如果使用.gitignore，则无需在此列出）
+.git/
+.gitignore
+
+# 忽略其他工具产生的临时或缓存文件
+.npm/
+yarn-error.log
+yarn.lock
+npm-debug.log
+.prettierrc
+.eslintcache
+.husky/
+
+# 如果有docs或examples等仅用于展示目的的目录，可以忽略
+docs/
+examples/
+
+# 以及其他特定于项目的不需要发布的文件
