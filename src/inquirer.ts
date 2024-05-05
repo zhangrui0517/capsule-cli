@@ -1,10 +1,9 @@
 import { select, Separator, input } from '@inquirer/prompts'
 import '@inquirer/type'
-import { fileInfos } from './types'
 
 
 /** 生成模板选择提示 */
-export function templateGeneratorInquirer (innerTemplate: fileInfos, customTemplate: fileInfos) {
+export function templateGeneratorInquirer (innerTemplate: any, customTemplate: any) {
     const innerChoices = innerTemplate.map((item) => {
         const { name } = item
         return {
