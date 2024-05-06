@@ -1,7 +1,8 @@
 import path from 'path'
 import { Command } from 'commander'
 import { templateCommand } from './command/index.js'
-import { requireFile, defineConfig, dirname } from './utils/index.js'
+import { requireFile, dirname } from './utils/index.js'
+import { defineConfig } from './command/template/util.js'
 
 function runCli () {
     const packageJson = requireFile(path.resolve(dirname(import.meta), '../package.json'))

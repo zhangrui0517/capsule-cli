@@ -1,7 +1,8 @@
-import { defineConfig } from '../lib/utils/index.js'
+import { defineConfig } from '../src/command/template/util.js'
+
 export default defineConfig({
     // 需要动态替换文本的文件
-    parseFiles: [{}],
+    parseFiles: [],
     templates: [
         {
             npmName: '',
