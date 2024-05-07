@@ -9,6 +9,7 @@ export function templateCommand (commandObj: Command) {
         .description('Generate code template')
         .action(async (/* str, options */) => {
             // innerTemplate
-            readInnerDir()
+            const innerTemplate = await readInnerDir()
+            console.log('innerTemplate: ', innerTemplate)
         })
 }
