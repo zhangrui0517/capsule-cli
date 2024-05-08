@@ -19,12 +19,6 @@ export const parseFileExts = [
 /** Read inner template directory */
 export async function readInnerDir() {
   try {
-	const result: Array<{
-		name: string
-		npmName?: string
-		description?: string
-		path?: string
-	}> = []
     const innerPath = path.resolve(getRootPath(), './template')
     const innerTemplate = fse.readdirSync(innerPath)
     if (innerTemplate?.length) {
@@ -39,45 +33,78 @@ export async function readInnerDir() {
         )
         innerTemplate.splice(configIndex, 1)
       }
-	  const configTemplateMapByName = config?.templates?.reduce((acc, cur) => {
-		const { name, npmName } = cur
-		if(name) {
-			acc[name] = cur
-		} else if (npmName) {
-			acc[npmName] = cur
-		}
-		return acc
-	  }, {})
-      if (innerTemplate.length) {
-		innerTemplate.forEach(fileName => {
-			const fileResult = {
-				name: fileName,
-				path: path.resolve(innerPath, `./${fileName}`),
-			}
-			const configTemplateItem = configTemplateMapByName[fileName]
-			if(configTemplateItem) {
-				Object.assign(fileResult, configTemplateItem)
-				delete configTemplateMapByName[fileName]
-			}
-			result.push(fileResult)
-		})
-      }
-      // config template
-	  const configTemplates = configTemplateMapByName && Object.values(configTemplateMapByName) as ConfigFile['templates']
-	  if(configTemplates?.length) {
-		configTemplates.forEach(templateItem => {
-			templateItem.npmName && result.push({
-				...templateItem,
-				name: templateItem.npmName
-			})
-		})
-	  }
+      return getTemplateInfos(innerTemplate, config, innerPath)
     }
-	return result
   } catch (err) {
     console.error(err)
   }
   return []
+}
+
+/** Read custom template directory */
+export async function readCustomDir() {
+  const customPath = path.resolve(process.cwd(), './template')
+  if (fse.existsSync(customPath)) {
+    const customTemplate = fse.readdirSync(customPath)
+    const configIndex = customTemplate.findIndex(
+      (fileItem) => fileItem.indexOf(CONFIG_NAME) > -1
+    )
+    let config: ConfigFile | undefined
+    if (configIndex > -1) {
+      config = await loadConfigFile(
+        path.resolve(customPath, `./${customTemplate[configIndex]}`)
+      )
+      customTemplate.splice(configIndex, 1)
+    }
+    return getTemplateInfos(customTemplate, config, customPath)
+  }
+  return []
+}
+
+export function getTemplateInfos (templateList: string[], config: ConfigFile | undefined, currentPath: string) {
+  const result: Array<{
+    name: string
+    npmName?: string
+    description?: string
+    path?: string
+  }> = []
+  const configTemplateMapByName = config?.templates?.reduce((acc, cur) => {
+    const { name, npmName } = cur
+    if (name) {
+      acc[name] = cur
+    } else if (npmName) {
+      acc[npmName] = cur
+    }
+    return acc
+  }, {})
+  if (templateList.length) {
+    templateList.forEach((fileName) => {
+      const fileResult = {
+        name: fileName,
+        path: path.resolve(currentPath, `./${fileName}`),
+      }
+      const configTemplateItem = configTemplateMapByName[fileName]
+      if (configTemplateItem) {
+        Object.assign(fileResult, configTemplateItem)
+        delete configTemplateMapByName[fileName]
+      }
+      result.push(fileResult)
+    })
+  }
+  // config template
+  const configTemplates =
+    configTemplateMapByName &&
+    (Object.values(configTemplateMapByName) as ConfigFile['templates'])
+  if (configTemplates?.length) {
+    configTemplates.forEach((templateItem) => {
+      templateItem.npmName &&
+        result.push({
+          ...templateItem,
+          name: templateItem.npmName,
+        })
+    })
+  }
+  return result
 }
 
 /** Capsule confinuration define function */
@@ -99,7 +126,9 @@ export async function transformTsToJs(filePath: string) {
 }
 
 /** Load config file */
-export async function loadConfigFile(configPath: string): Promise<ConfigFile | undefined> {
+export async function loadConfigFile(
+  configPath: string
+): Promise<ConfigFile | undefined> {
   const { ext, name, dir } = path.parse(configPath)
   const isESM = isEsmFile(configPath)
   switch (ext) {
@@ -122,9 +151,8 @@ export async function loadConfigFile(configPath: string): Promise<ConfigFile | u
       fse.unlinkSync(tempConfigFilePath)
       return config.default
     }
-	default: {
-		return undefined
-	}
+    default: {
+      return undefined
+    }
   }
 }
-	
