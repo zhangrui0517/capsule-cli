@@ -26,3 +26,10 @@ export type ConfigFile = {
     /** Template list, use npm package as template */
 	templates?: Array<TemplateItem>
 }
+
+export type TemplateInfos = Array<{
+    name: string
+    npmName?: string
+    description?: string
+    path?: string
+  }>

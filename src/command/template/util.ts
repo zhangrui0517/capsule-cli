@@ -4,7 +4,7 @@ import module from 'module'
 import { build } from 'esbuild'
 import { generateId, getRootPath, isEsmFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
-import { ConfigFile } from '../../types.js'
+import { ConfigFile, TemplateInfos } from '../../types.js'
 
 export const parseFileExts = [
   '.js',
@@ -62,12 +62,7 @@ export async function readCustomDir() {
 }
 
 export function getTemplateInfos (templateList: string[], config: ConfigFile | undefined, currentPath: string) {
-  const result: Array<{
-    name: string
-    npmName?: string
-    description?: string
-    path?: string
-  }> = []
+  const result: TemplateInfos = []
   const configTemplateMapByName = config?.templates?.reduce((acc, cur) => {
     const { name, npmName } = cur
     if (name) {
@@ -155,4 +150,46 @@ export async function loadConfigFile(
       return undefined
     }
   }
+}
+
+/** Generate inquirer choices */
+export function generateTemplatesChoices (templateInfosArr: TemplateInfos[]) {
+  const result: Array<Array<{
+    name: string
+    description: string
+    value: {
+      path?: string
+      npmName?: string
+    }
+  }>> = []
+  templateInfosArr.forEach((templateInfos, index) => {
+    result[index] = templateInfos.length ? templateInfos.map(infoItem => {
+      const { name, npmName, description, path } = infoItem
+      return {
+        name: name || npmName,
+        description,
+        value: {
+          path,
+          npmName
+        }
+      }
+    }) : []
+  })
+  return result
+}
+
+/** Parse file to replace template string */
+export async function parseFileToReplace (filePath: string) {
+  filePath
+}
+
+/** Copy template to target path */
+export async function copyToTarget (filePath: string, targetPath: string) {
+  filePath
+  targetPath
+}
+
+/** Download template from npm package */
+export async function requestNpmPackage (npmName: string) {
+  npmName
 }
