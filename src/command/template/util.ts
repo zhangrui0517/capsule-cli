@@ -1,10 +1,11 @@
 import fse from 'fs-extra'
 import path from 'path'
 import module from 'module'
-import { build } from 'esbuild'
-import { generateId, getRootPath, isEsmFile } from '../../utils/index.js'
+import { confirm } from '@inquirer/prompts'
+import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
 import { ConfigFile, TemplateInfos } from '../../types.js'
+import { build } from 'esbuild'
 
 export const parseFileExts = [
   '.js',
@@ -102,18 +103,13 @@ export function getTemplateInfos (templateList: string[], config: ConfigFile | u
   return result
 }
 
-/** Capsule confinuration define function */
-export function defineConfig(config: ConfigFile) {
-  return config
-}
-
 export async function transformTsToJs(filePath: string) {
   const buildResult = await build({
     entryPoints: [filePath],
     bundle: true,
     platform: 'node',
     write: false,
-    external: ['esbuild'],
+    external: ['esbuild', 'inquirer'],
     format: 'esm',
     minify: true,
   })
@@ -180,13 +176,31 @@ export function generateTemplatesChoices (templateInfosArr: TemplateInfos[]) {
 
 /** Parse file to replace template string */
 export async function parseFileToReplace (filePath: string) {
-  filePath
+  readFile(filePath, (content) => {
+    console.log('content: ', content)
+  }, {
+    deep: true
+  })
 }
 
 /** Copy template to target path */
 export async function copyToTarget (filePath: string, targetPath: string) {
-  filePath
-  targetPath
+  const { name } = path.parse(filePath)
+  const fullTargetPath = path.resolve(targetPath, `./${name}`)
+  if(fse.existsSync(fullTargetPath)) {
+    const confimResult = await confirm({
+      message: 'The file or directory already exists, do you want to overwrite it?',
+      default: false
+    })
+    if(confimResult) {
+      fse.copySync(filePath, path.resolve(targetPath, `./${name}`))
+      return fullTargetPath
+    }
+    return undefined
+  } else {
+    fse.copySync(filePath, path.resolve(targetPath, `./${name}`))
+    return fullTargetPath
+  }
 }
 
 /** Download template from npm package */

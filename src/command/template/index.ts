@@ -1,5 +1,4 @@
 import { Command } from 'commander'
-import path from 'node:path'
 import { input, select, Separator } from '@inquirer/prompts'
 import { copyToTarget, generateTemplatesChoices, parseFileToReplace, readCustomDir, readInnerDir, requestNpmPackage } from './util.js'
 
@@ -31,17 +30,20 @@ export function templateCommand (commandObj: Command) {
                 })
                 if(filePath) {
                     // copy template
-                    await copyToTarget(filePath, targetPath)
-                    const { name } = path.parse(filePath)
-                    await parseFileToReplace(path.resolve(targetPath, `./${name}`))
-                    console.log('template generate success!')
+                    const fullTargetPath = await copyToTarget(filePath, targetPath)
+                    if(fullTargetPath) {
+                        await parseFileToReplace(fullTargetPath)
+                        console.log('Template generate success!')
+                    } else {
+                        console.log('Copy template abort')
+                    }
                 } else {
                     // request npm package
                     const result = await requestNpmPackage(npmName)
                     result
                 }
             } catch(err) {
-                console.log('exit')
+                console.error(err)
             }
         })
 }
