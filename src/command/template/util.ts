@@ -2,7 +2,7 @@ import fse from 'fs-extra'
 import path from 'node:path'
 import module from 'node:module'
 import url from 'node:url'
-import { confirm } from '@inquirer/prompts'
+import { confirm, input } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
 import { ConfigFile, TemplateInfos } from '../../types.js'
@@ -14,8 +14,8 @@ export const parseFileExts = [
   '.mjs',
   '.cjs',
   '.json',
-  'jsx',
-  'tsx',
+  '.jsx',
+  '.tsx',
 ]
 
 /** Read inner template directory */
@@ -177,12 +177,42 @@ export function generateTemplatesChoices (templateInfosArr: TemplateInfos[]) {
 }
 
 /** Parse file to replace template string */
-export async function parseFileToReplace (filePath: string) {
-  readFile(filePath, (content) => {
-    console.log('content: ', content)
+export async function parseFileToReplace (filePath: string, regexp: RegExp) {
+  const replaceFileInfos: Array<{
+    filePath: string
+    fileContent: string
+    replaceStr: string
+  }> = []
+  const inquirerPromise: Promise<string>[] = []
+  readFile(filePath, (content, filePath) => {
+    const fileContent = content.toString()
+    const matchResult = fileContent.match(regexp)
+    if(matchResult?.length) {
+      matchResult.forEach(replaceStr => {
+        const replaceKeyItem = replaceStr.replace(/[<>=]/g, '').trim()
+        inquirerPromise.push(input({
+          message: `[${replaceKeyItem}] replace to`,
+          default: replaceKeyItem
+        }))
+        replaceFileInfos.push({
+          filePath,
+          fileContent,
+          replaceStr
+        })
+      })
+    }
   }, {
-    deep: true
+    deep: true,
+    readExts: parseFileExts
   })
+  if(inquirerPromise.length) {
+    const inquirerResult = await Promise.all(inquirerPromise)
+    inquirerResult.forEach((result, index) => {
+      const { filePath, fileContent, replaceStr } = replaceFileInfos[index]!
+      const newFileContent = fileContent.replace(replaceStr, result)
+      fse.writeFileSync(filePath, newFileContent)
+    })
+  }
 }
 
 /** Copy template to target path */

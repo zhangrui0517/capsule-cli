@@ -45,14 +45,13 @@ export function isEsmFile(filePath) {
 }
 
 /** Read files based on file format */
-export function readFile (filePath: string, callback: (fileContent) => void, options: {
+export function readFile (filePath: string, callback: (fileContent: Buffer, filePath?: string, ) => void, options: {
 	deep?: boolean
 	readExts?: string[]
 } = {}) {
 	const { deep, readExts = [] } = options
 	const stat = fse.statSync(filePath)
 	const isDirectory = stat.isDirectory()
-	debugger
 	if(isDirectory) {
 		if(deep) {
 			const subFileList = fse.readdirSync(filePath)
@@ -65,6 +64,6 @@ export function readFile (filePath: string, callback: (fileContent) => void, opt
 	const { ext } = path.parse(filePath)
 	if(readExts.includes(ext)) {
 		const fileContent = fse.readFileSync(filePath)
-		callback(fileContent)
+		callback(fileContent, filePath)
 	}
 }

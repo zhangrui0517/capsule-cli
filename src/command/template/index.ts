@@ -32,7 +32,7 @@ export function templateCommand (commandObj: Command) {
                     // copy template
                     const fullTargetPath = await copyToTarget(filePath, targetPath)
                     if(fullTargetPath) {
-                        await parseFileToReplace(fullTargetPath)
+                        await parseFileToReplace(fullTargetPath, new RegExp(/\<\=(.*)\>/, 'g'))
                         console.log('Template generate success!')
                     } else {
                         console.log('Copy template abort')
