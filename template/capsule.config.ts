@@ -1,4 +1,4 @@
-import { defineConfig } from '../src/utils/index.js'
+import { defineConfig } from '../src/utils/defineConfig.js'
 
 export default defineConfig({
     // 需要动态替换文本的文件

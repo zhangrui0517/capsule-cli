@@ -26,7 +26,6 @@
   "license": "MIT",
   "dependencies": {
     "@inquirer/prompts": "^4.1.0",
-    "capsule-cli": "^1.0.0",
     "commander": "^12.0.0",
     "esbuild": "^0.20.2",
     "fs-extra": "^11.2.0"

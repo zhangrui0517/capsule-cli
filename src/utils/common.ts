@@ -1,6 +1,6 @@
-import path from 'path'
-import url from 'url'
-import module from 'module'
+import path from 'node:path'
+import url from 'node:url'
+import module from 'node:module'
 import fse from 'fs-extra'
 
 /** __firename */

@@ -1,6 +1,7 @@
 import fse from 'fs-extra'
-import path from 'path'
-import module from 'module'
+import path from 'node:path'
+import module from 'node:module'
+import url from 'node:url'
 import { confirm } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
@@ -133,13 +134,14 @@ export async function loadConfigFile(
     }
     case '.ts': {
       const code = await transformTsToJs(configPath)
-      const tempConfigFilePath = path.resolve(
+      const tempConfigFilePathBase = path.resolve(
         dir,
-        `.${name}_temp_${generateId()}.js`
+        `${name}_temp_${generateId()}`
       )
-      fse.writeFileSync(tempConfigFilePath, code)
-      const config = await import(tempConfigFilePath)
-      fse.unlinkSync(tempConfigFilePath)
+      const tempConfigFielPath = `${tempConfigFilePathBase}.mjs`
+      fse.writeFileSync(tempConfigFielPath, code)
+      const config = await import(`${url.pathToFileURL(tempConfigFilePathBase)}.mjs`)
+      fse.unlinkSync(tempConfigFielPath)
       return config.default
     }
     default: {
