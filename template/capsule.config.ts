@@ -10,9 +10,9 @@ export default defineConfig({
             description: '组件模板',
         },
         {
-            npmName: 'widget2',
-            label: '组件2',
-            description: '组件模板2',
+            npmName: 'execa',
+            label: 'run lib label',
+            description: 'run lib desc',
         }
     ]
 })

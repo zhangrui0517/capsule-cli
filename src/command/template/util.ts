@@ -2,6 +2,8 @@ import fse from 'fs-extra'
 import path from 'node:path'
 import module from 'node:module'
 import url from 'node:url'
+import os from 'node:os'
+import { execa } from 'execa'
 import { confirm, input } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
@@ -235,7 +237,53 @@ export async function copyToTarget (filePath: string, targetPath: string) {
   }
 }
 
+export async function initPackage (dirPath: string) {
+  return await execa('npm', ['init', '-y'], {
+    cwd: dirPath
+  })
+}
+
+export async function installNpmPackage (npmName: string, options?: {
+  version?: string
+  installDir?: string
+  commandProps?: Array<string>
+}) {
+  const { version = '@latest', installDir = process.cwd(), commandProps = [] } = options || {}
+  const installDirStat = await fse.stat(installDir)
+  if(installDirStat.isDirectory()) {
+    const isExistPackageJson = await fse.existsSync(path.resolve(installDir, './package.json'))
+    if(!isExistPackageJson) {
+      await initPackage(installDir)
+    }
+    const installResult = await execa('npm', ['install', `${npmName}${version}`, ...commandProps], {
+      cwd: installDir
+    })
+    const { stderr } = installResult
+    if(stderr) {
+      throw new Error(stderr)
+    }
+    return installResult
+  }
+  throw new Error('Npm package must install to a directory')
+}
+
 /** Download template from npm package */
 export async function requestNpmPackage (npmName: string) {
-  npmName
+  const tempDir = os.tmpdir()
+  const cacheDir = path.resolve(tempDir, 'capsule-cli-cache')
+  console.log('cacheDir: ', cacheDir)
+  try {
+    // Exist cache dir, if not exist, throw error to cache
+    fse.statSync(cacheDir)
+  } catch (e) {
+    fse.mkdirSync(cacheDir)
+    const installResult = await installNpmPackage(npmName, {
+      installDir: cacheDir
+    })
+    const { stderr, stdout } = installResult
+    if(!stderr) {
+      console.log(stdout)
+    }
+    console.error(stderr)
+  }
 }

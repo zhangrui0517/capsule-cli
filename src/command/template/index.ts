@@ -40,7 +40,7 @@ export function templateCommand (commandObj: Command) {
                 } else {
                     // request npm package
                     const result = await requestNpmPackage(npmName)
-                    result
+                    console.log('result: ', result)
                 }
             } catch(err) {
                 console.error(err)
