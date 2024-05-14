@@ -4,6 +4,7 @@ import module from 'node:module'
 import url from 'node:url'
 import os from 'node:os'
 import { execa } from 'execa'
+import axios from 'axios'
 import { confirm, input } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
@@ -248,42 +249,96 @@ export async function installNpmPackage (npmName: string, options?: {
   installDir?: string
   commandProps?: Array<string>
 }) {
-  const { version = '@latest', installDir = process.cwd(), commandProps = [] } = options || {}
+  const { version = 'latest', installDir = process.cwd(), commandProps = [] } = options || {}
   const installDirStat = await fse.stat(installDir)
   if(installDirStat.isDirectory()) {
     const isExistPackageJson = await fse.existsSync(path.resolve(installDir, './package.json'))
     if(!isExistPackageJson) {
       await initPackage(installDir)
     }
-    const installResult = await execa('npm', ['install', `${npmName}${version}`, ...commandProps], {
+    const installResult = await execa('npm', ['install', `${npmName}@${version}`, ...commandProps], {
       cwd: installDir
     })
     const { stderr } = installResult
     if(stderr) {
-      throw new Error(stderr)
+      return {
+        error: stderr,
+        data: null
+      }
     }
-    return installResult
+    return {
+      error: null,
+      data: installResult
+    }
   }
-  throw new Error('Npm package must install to a directory')
+  return {
+    error: 'The installation location is wrong!',
+    data: null
+  }
 }
 
 /** Download template from npm package */
-export async function requestNpmPackage (npmName: string) {
+export async function requestNpmPackage (npmName: string, options?: {
+  version?: string
+  installDir?: string
+  commandProps?: Array<string>
+}) {
+  const { version } = options || {}
   const tempDir = os.tmpdir()
   const cacheDir = path.resolve(tempDir, 'capsule-cli-cache')
-  console.log('cacheDir: ', cacheDir)
+  const packePath = path.resolve(cacheDir, `./node_modules/${npmName}`)
   try {
     // Exist cache dir, if not exist, throw error to cache
     fse.statSync(cacheDir)
+    const packageJson = await fse.readJSON(path.resolve(cacheDir, './package.json'))
+    const currentVersion = packageJson.dependencies[npmName]
+    if(version && currentVersion !== version) {
+       const { error } = await installNpmPackage(npmName, {
+        installDir: cacheDir,
+        version
+      })
+      if(error) {
+        throw new Error(error)
+      }
+      return packePath
+    }
+    if(!version) {
+      // Check latest version
+      const lastVersion = await getLatestVersion(npmName)
+      if(lastVersion && currentVersion !== lastVersion) {
+        const { error } = await installNpmPackage(npmName, {
+          installDir: cacheDir
+        })
+        if(error) {
+          throw new Error(error)
+        }
+        return packePath
+      }
+      if(!lastVersion) {
+        console.warn('Failed to obtain the latest version of the current template, currently using version is ', currentVersion)
+      }
+      return packePath
+    }
+    return null
   } catch (e) {
+    console.log(e)
     fse.mkdirSync(cacheDir)
-    const installResult = await installNpmPackage(npmName, {
+    const { error, data } = await installNpmPackage(npmName, {
       installDir: cacheDir
     })
-    const { stderr, stdout } = installResult
-    if(!stderr) {
-      console.log(stdout)
+    if(!error) {
+      console.log(data)
+      return packePath
     }
-    console.error(stderr)
+    console.error(error)
+    return null
   }
+}
+
+export async function getLatestVersion (npmName: string) {
+  return axios.get(`https://registry.npmjs.org/${npmName}`).then(res => {
+    return res.data?.['dist-tags']?.['latest']
+  }).catch(() => {
+    return ''
+  })
 }
