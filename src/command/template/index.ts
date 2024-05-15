@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { input, select, Separator } from '@inquirer/prompts'
-import { copyToTarget, generateTemplatesChoices, parseFileToReplace, readCustomDir, readInnerDir, requestNpmPackage } from './util.js'
+import { copyAndParseTemplate, generateTemplatesChoices, readCustomDir, readInnerDir, requestNpmPackage } from './util.js'
+import path from 'node:path'
 
 /**
  *  Generate inner template or custom template
@@ -29,18 +30,15 @@ export function templateCommand (commandObj: Command) {
                     default: process.cwd()
                 })
                 if(filePath) {
-                    // copy template
-                    const fullTargetPath = await copyToTarget(filePath, targetPath)
-                    if(fullTargetPath) {
-                        await parseFileToReplace(fullTargetPath, new RegExp(/\<\=(.*)\>/, 'g'))
-                        console.log('Template generate success!')
-                    } else {
-                        console.log('Copy template abort')
-                    }
+                    copyAndParseTemplate(filePath, targetPath)
                 } else {
                     // request npm package
                     const result = await requestNpmPackage(npmName)
-                    console.log('result: ', result)
+                    if(result) {
+                        copyAndParseTemplate(path.resolve(result, './template'), targetPath, {
+                            inside: true
+                        })
+                    }
                 }
             } catch(err) {
                 console.error(err)

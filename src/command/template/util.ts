@@ -6,7 +6,7 @@ import os from 'node:os'
 import { execa } from 'execa'
 import axios from 'axios'
 import { confirm, input } from '@inquirer/prompts'
-import { generateId, getRootPath, isEsmFile, readFile } from '../../utils/index.js'
+import { generateId, getRootPath, isEsmFile, promiseByStep, readFile } from '../../utils/index.js'
 import { CONFIG_NAME } from '../../constant.js'
 import { ConfigFile, TemplateInfos } from '../../types.js'
 import { build } from 'esbuild'
@@ -19,6 +19,7 @@ export const parseFileExts = [
   '.json',
   '.jsx',
   '.tsx',
+  '.txt'
 ]
 
 /** Read inner template directory */
@@ -180,7 +181,7 @@ export function generateTemplatesChoices (templateInfosArr: TemplateInfos[]) {
 }
 
 /** Parse file to replace template string */
-export async function parseFileToReplace (filePath: string, regexp: RegExp) {
+export async function parseFileToReplace (filePath: string) {
   const replaceFileInfos: Array<{
     filePath: string
     fileContent: string
@@ -189,7 +190,7 @@ export async function parseFileToReplace (filePath: string, regexp: RegExp) {
   const inquirerPromise: Promise<string>[] = []
   readFile(filePath, (content, filePath) => {
     const fileContent = content.toString()
-    const matchResult = fileContent.match(regexp)
+    const matchResult = fileContent.match(/\<\=(.*)\>/g)
     if(matchResult?.length) {
       matchResult.forEach(replaceStr => {
         const replaceKeyItem = replaceStr.replace(/[<>=]/g, '').trim()
@@ -219,21 +220,38 @@ export async function parseFileToReplace (filePath: string, regexp: RegExp) {
 }
 
 /** Copy template to target path */
-export async function copyToTarget (filePath: string, targetPath: string) {
-  const { name } = path.parse(filePath)
-  const fullTargetPath = path.resolve(targetPath, `./${name}`)
+export async function copyToTarget (filePath: string, targetPath: string, options?: {
+  inside?: boolean
+}) {
+  const { inside = false } = options || {}
+  if(inside) {
+    const filePathStat = await fse.stat(filePath)
+    if(filePathStat.isDirectory()) {
+      const fileList = await fse.readdir(filePath)
+      const result = []
+      await promiseByStep(fileList.map(fileItem => {
+        result.push(path.resolve(targetPath, fileItem))
+        return () => copyToTarget(path.resolve(filePath, fileItem), targetPath)
+      }), (e) => {
+        console.log('e: ', e)
+      })
+      return result
+    }
+  }
+  const { name, ext } = path.parse(filePath)
+  const fullTargetPath = path.resolve(targetPath, `./${name}${ext}`)
   if(fse.existsSync(fullTargetPath)) {
-    const confimResult = await confirm({
+    const comfirmResult = await confirm({
       message: 'The file or directory already exists, do you want to overwrite it?',
       default: false
     })
-    if(confimResult) {
-      fse.copySync(filePath, path.resolve(targetPath, `./${name}`))
+    if(comfirmResult) {
+      await fse.copy(filePath, fullTargetPath)
       return fullTargetPath
     }
     return undefined
   } else {
-    fse.copySync(filePath, path.resolve(targetPath, `./${name}`))
+    await fse.copy(filePath, fullTargetPath)
     return fullTargetPath
   }
 }
@@ -342,3 +360,21 @@ export async function getLatestVersion (npmName: string) {
     return ''
   })
 }
+
+export async function copyAndParseTemplate (filePath: string, targetPath: string, options?: {
+  inside?: boolean
+}) {
+  // copy template
+  const fullTargetPath = await copyToTarget(filePath, targetPath, options)
+  console.log('fullTargetPath: ', fullTargetPath)
+  if(fullTargetPath) {
+      Array.isArray(fullTargetPath) 
+        ? await promiseByStep(fullTargetPath.map(pathItem => () => parseFileToReplace(pathItem)))
+        : await parseFileToReplace(fullTargetPath)
+      console.log('Template generate success!')
+      return true
+  } else {
+      console.log('Copy template abort')
+      return false
+  }
+} 

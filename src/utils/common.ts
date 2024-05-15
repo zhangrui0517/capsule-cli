@@ -67,3 +67,15 @@ export function readFile (filePath: string, callback: (fileContent: Buffer, file
 		callback(fileContent, filePath)
 	}
 }
+
+export async function promiseByStep<T> (promises: Array<() => Promise<T>>, callback?: (e: T) => void, index = 0) {
+	const task = promises[index]
+	if(task) {
+		const result = await task()
+		callback && callback(result)
+	}
+	const nextIndex = index + 1
+	if(promises[nextIndex]) {
+		await promiseByStep(promises, callback, nextIndex)
+	}
+}
