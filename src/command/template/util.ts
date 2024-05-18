@@ -5,11 +5,11 @@ import url from 'node:url'
 import os from 'node:os'
 import { execa } from 'execa'
 import axios from 'axios'
-import { confirm, input } from '@inquirer/prompts'
+import { confirm, input, select, Separator } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, promiseByStep, readFile } from '../../utils/index.js'
-import { CONFIG_NAME } from '../../constant.js'
-import { ConfigFile, TemplateInfos } from '../../types.js'
+import { ConfigFile, TemplateCommandOption, TemplateInfos } from '../../types.js'
 import { build } from 'esbuild'
+import { CONFIG_NAME } from '../../constant.js'
 
 export const parseFileExts = [
   '.js',
@@ -22,52 +22,110 @@ export const parseFileExts = [
   '.txt'
 ]
 
+/** Output template list */
+export async function selectTemplate (options: TemplateCommandOption) {
+  const { config, template } = options
+  // Read inner configuration file
+  const innerConfigResult = await loadInnerConfigFile() || {}
+  const { templates: innerTemplates, templatePath: innerTemplatePath } = await readInnerTemplate()
+
+  // Read Custom configuration file
+  const customConfigResult = await loadCustomConfigFile(config) || {}
+  const { templates: customTemplates, templatePath: customTemplatePath } = await readCustomTemplate(template)
+
+  const innerTemplateInfos = getTemplateInfos(innerTemplates, innerTemplatePath, innerConfigResult)
+  const customTemplateInfos = getTemplateInfos(customTemplates, customTemplatePath, customConfigResult)
+
+  const [innerChoices, customChoices] = generateTemplatesChoices([innerTemplateInfos, customTemplateInfos])
+
+  return select({
+      message: 'Please select a template',
+      choices: [
+          new Separator(`Preset templates${!innerChoices.length ? '(Empty)' : ''}`),
+          ...innerChoices,
+          new Separator(`Custom templates${!customChoices.length ? '(Empty)' : ''}`),
+          ...customChoices
+      ]
+  })
+}
+
 /** Read inner template directory */
-export async function readInnerDir() {
-  try {
-    const innerPath = path.resolve(getRootPath(), './template')
-    const innerTemplate = fse.readdirSync(innerPath)
-    if (innerTemplate?.length) {
-      const configIndex = innerTemplate.findIndex(
-        (fileName) => fileName.indexOf(CONFIG_NAME) > -1
-      )
-      let config: ConfigFile | undefined
-      // Is there a configuration file exist
-      if (configIndex > -1) {
-        config = await loadConfigFile(
-          path.resolve(innerPath, `./${innerTemplate[configIndex]}`)
-        )
-        innerTemplate.splice(configIndex, 1)
-      }
-      return getTemplateInfos(innerTemplate, config, innerPath)
+export async function readInnerTemplate() {
+  const templatePath = path.resolve(getRootPath(), './template')
+  if(fse.existsSync(templatePath)) {
+    const innerTemplate = await fse.readdir(templatePath)
+    return {
+      templates: innerTemplate?.length ? innerTemplate : [],
+      templatePath
     }
-  } catch (err) {
-    console.error(err)
   }
-  return []
+  return {
+    templates: [],
+    templatePath
+  }
 }
 
 /** Read custom template directory */
-export async function readCustomDir() {
-  const customPath = path.resolve(process.cwd(), './template')
+export async function readCustomTemplate(template?: string) {
+  let customPath: string
+  if(template && path.isAbsolute(template)) {
+    customPath = template
+  }
+  if(!customPath) {
+    customPath = path.resolve(process.cwd(), template || './template')
+  }
   if (fse.existsSync(customPath)) {
     const customTemplate = fse.readdirSync(customPath)
-    const configIndex = customTemplate.findIndex(
-      (fileItem) => fileItem.indexOf(CONFIG_NAME) > -1
-    )
-    let config: ConfigFile | undefined
-    if (configIndex > -1) {
-      config = await loadConfigFile(
-        path.resolve(customPath, `./${customTemplate[configIndex]}`)
-      )
-      customTemplate.splice(configIndex, 1)
+    return {
+      templates: customTemplate?.length ? customTemplate : [],
+      templatePath: customPath
     }
-    return getTemplateInfos(customTemplate, config, customPath)
   }
-  return []
+  return {
+    templates: [],
+    templatePath: customPath
+  }
 }
 
-export function getTemplateInfos (templateList: string[], config: ConfigFile | undefined, currentPath: string) {
+/** Load inner config file */
+export async function loadInnerConfigFile () {
+  const rootPath = getRootPath()
+  const rootFileList = await fse.readdir(getRootPath())
+  let configFilePath: string
+  for(const fileName of rootFileList) {
+    if(fileName.indexOf(CONFIG_NAME) > -1) {
+      configFilePath = path.resolve(rootPath, fileName)
+      break
+    }
+  }
+  if(configFilePath) {
+    return loadConfigFile(configFilePath)
+  }
+  return null
+}
+
+/** Load custom config file */
+export async function loadCustomConfigFile (customConfig?: string) {
+  let customConfigPath: string
+  if(customConfig && path.isAbsolute(customConfig)) {
+    customConfigPath = customConfig
+  }
+  if(!customConfigPath) {
+    const projectPath = process.cwd()
+    const projectFileList = await fse.readdir(projectPath)
+    for(const fileName of projectFileList) {
+      if(fileName.indexOf(customConfig || CONFIG_NAME) > -1) {
+        customConfigPath = path.resolve(projectPath, fileName)
+      }
+    }
+  }
+  if(customConfigPath && fse.existsSync(customConfigPath)) {
+    return loadConfigFile(customConfigPath)
+  }
+  return null
+}
+
+export function getTemplateInfos (templateList: string[], currentPath: string, config?: ConfigFile) {
   const result: TemplateInfos = []
   const configTemplateMapByName = config?.templates?.reduce((acc, cur) => {
     const { name, npmName } = cur
@@ -84,7 +142,7 @@ export function getTemplateInfos (templateList: string[], config: ConfigFile | u
         name: fileName,
         path: path.resolve(currentPath, `./${fileName}`),
       }
-      const configTemplateItem = configTemplateMapByName[fileName]
+      const configTemplateItem = configTemplateMapByName?.[fileName]
       if (configTemplateItem) {
         Object.assign(fileResult, configTemplateItem)
         delete configTemplateMapByName[fileName]

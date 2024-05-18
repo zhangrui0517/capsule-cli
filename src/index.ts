@@ -14,7 +14,7 @@ function runCli () {
         .description(description)
         .version(version)
     templateCommand(mainCommand)
-    mainCommand.parse()
+    mainCommand.parse(process.argv)
 }
 
 export { defineConfig }
