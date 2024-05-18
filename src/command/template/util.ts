@@ -10,6 +10,7 @@ import { generateId, getRootPath, isEsmFile, promiseByStep, readFile } from '../
 import { ConfigFile, TemplateCommandOption, TemplateInfos } from '../../types.js'
 import { build } from 'esbuild'
 import { CONFIG_NAME } from '../../constant.js'
+import ora from 'ora'
 
 export const parseFileExts = [
   '.js',
@@ -419,6 +420,7 @@ export async function requestNpmPackage (npmName: string, options?: {
   const tempDir = os.tmpdir()
   const cacheDir = path.resolve(tempDir, 'capsule-cli-cache')
   const packePath = path.resolve(cacheDir, `./node_modules/${npmName}`)
+  const spinner = ora('Start requesting npm template package').start()
   try {
     // Exist cache dir, if not exist, throw error to cache
     fse.statSync(cacheDir)
@@ -432,6 +434,7 @@ export async function requestNpmPackage (npmName: string, options?: {
       if(error) {
         throw new Error(error)
       }
+      spinner.succeed()
       return packePath
     }
     if(!version) {
@@ -444,25 +447,28 @@ export async function requestNpmPackage (npmName: string, options?: {
         if(error) {
           throw new Error(error)
         }
+        spinner.succeed()
         return packePath
       }
       if(!lastVersion) {
         console.warn('Failed to obtain the latest version of the current template, currently using version is ', currentVersion)
       }
+      spinner.warn()
       return packePath
     }
+    spinner.fail()
     return null
   } catch (e) {
-    console.log(e)
     fse.mkdirSync(cacheDir)
-    const { error, data } = await installNpmPackage(npmName, {
+    const { error } = await installNpmPackage(npmName, {
       installDir: cacheDir
     })
     if(!error) {
-      console.log(data)
+      spinner.succeed()
       return packePath
     }
     console.error(error)
+    spinner.fail()
     return null
   }
 }

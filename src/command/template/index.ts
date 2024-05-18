@@ -1,7 +1,7 @@
+import path from 'node:path'
 import { Command } from 'commander'
 import { input } from '@inquirer/prompts'
 import { copyAndParseTemplate, requestNpmPackage, selectTemplate } from './util.js'
-import path from 'node:path'
 import { TemplateCommandOption } from '../../types.js'
 
 /**
