@@ -5,7 +5,7 @@ import url from 'node:url'
 import os from 'node:os'
 import { execa } from 'execa'
 import axios from 'axios'
-import { confirm, input, select, Separator } from '@inquirer/prompts'
+import { input, select, Separator } from '@inquirer/prompts'
 import { generateId, getRootPath, isEsmFile, promiseByStep, readFile } from '../../utils/index.js'
 import { ConfigFile, TemplateCommandOption, TemplateInfos } from '../../types.js'
 import { build } from 'esbuild'
@@ -277,40 +277,96 @@ export async function parseFileToReplace (filePath: string) {
   }
 }
 
+enum ECopyOverwrite {
+  'default' = 0,
+  'no' = -1,
+  'allNo' = -2,
+  'yes' = 1,
+  'allYes' = 2
+}
+
+type CopyToTargetResultItem = {
+  fullTargetPath?: string
+  overwrite: ECopyOverwrite
+}
+
 /** Copy template to target path */
 export async function copyToTarget (filePath: string, targetPath: string, options?: {
   inside?: boolean
+  overwrite?: ECopyOverwrite
 }) {
-  const { inside = false } = options || {}
+  const { inside = false, overwrite = 0 } = options || {}
   if(inside) {
     const filePathStat = await fse.stat(filePath)
     if(filePathStat.isDirectory()) {
       const fileList = await fse.readdir(filePath)
-      const result = []
+      const copyResult: Array<CopyToTargetResultItem> = []
+      let overwrite = 0
       await promiseByStep(fileList.map(fileItem => {
-        result.push(path.resolve(targetPath, fileItem))
-        return () => copyToTarget(path.resolve(filePath, fileItem), targetPath)
-      }), (e) => {
-        console.log('e: ', e)
+        return () => copyToTarget(path.resolve(filePath, fileItem), targetPath, {
+          overwrite
+        })
+      }), (result) => {
+        const currentResult = result[0]
+        const { overwrite: currentOverwrite } = currentResult
+        copyResult.push(currentResult)
+        if([-1, 0, 1].includes(currentOverwrite)) {
+          overwrite = 0
+        } else {
+          overwrite = currentOverwrite
+        }
       })
-      return result
+      return copyResult.filter(item => item.fullTargetPath)
     }
   }
   const { name, ext } = path.parse(filePath)
   const fullTargetPath = path.resolve(targetPath, `./${name}${ext}`)
-  if(fse.existsSync(fullTargetPath)) {
-    const comfirmResult = await confirm({
-      message: 'The file or directory already exists, do you want to overwrite it?',
-      default: false
-    })
-    if(comfirmResult) {
-      await fse.copy(filePath, fullTargetPath)
-      return fullTargetPath
+  if(overwrite <= 0 && fse.existsSync(fullTargetPath)) {
+    if(overwrite === -1 || overwrite === -2) {
+      console.log('Skip repeat files with file names:', `${name}${ext}`)
+      return [{
+        fullTargetPath: undefined,
+        overwrite
+      }]
     }
-    return undefined
+    const comfirmResult = await select<ECopyOverwrite>({
+      message: `The file or directory already exists, do you want to overwrite it? The file path is ${name}${ext}`,
+      choices: [
+        {
+          name: 'No',
+          value: -1
+        },
+        {
+          name: 'Yes',
+          value: 1
+        },
+        {
+          name: 'All Yes',
+          value: 2
+        },
+        {
+          name: 'All No',
+          value: -2
+        },
+      ]
+    })
+    if(comfirmResult > 0) {
+      await fse.copy(filePath, fullTargetPath)
+      return [{
+        fullTargetPath,
+        overwrite: comfirmResult
+      }]
+    }
+    return [{
+      fullTargetPath: undefined,
+      overwrite: comfirmResult
+    }]
   } else {
     await fse.copy(filePath, fullTargetPath)
-    return fullTargetPath
+    return [{
+      fullTargetPath,
+      overwrite
+    }]
   }
 }
 
@@ -423,12 +479,9 @@ export async function copyAndParseTemplate (filePath: string, targetPath: string
   inside?: boolean
 }) {
   // copy template
-  const fullTargetPath = await copyToTarget(filePath, targetPath, options)
-  console.log('fullTargetPath: ', fullTargetPath)
-  if(fullTargetPath) {
-      Array.isArray(fullTargetPath) 
-        ? await promiseByStep(fullTargetPath.map(pathItem => () => parseFileToReplace(pathItem)))
-        : await parseFileToReplace(fullTargetPath)
+  const copyResult = await copyToTarget(filePath, targetPath, options)
+  if(copyResult.length) {
+      await promiseByStep(copyResult.map(copyItem => () => parseFileToReplace(copyItem.fullTargetPath)))
       console.log('Template generate success!')
       return true
   } else {
