@@ -1,2 +1,2 @@
 # capsule-cli
-快速生成开发模板
+Quickly generate development templates
