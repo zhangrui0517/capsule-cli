@@ -432,7 +432,7 @@ export async function requestNpmPackage (npmName: string, options?: {
         version
       })
       if(error) {
-        spinner.fail(error)
+        spinner.fail(`Npm template download fail!\r\n${error.shortMessage}`)
         return undefined
       }
     }
@@ -445,9 +445,7 @@ export async function requestNpmPackage (npmName: string, options?: {
     version
   })
   if(error) {
-    spinner.fail('Npm template download fail!')
-    debugger
-    console.error(error?.shot)
+    spinner.fail(`Npm template download fail!\r\n${error.shortMessage}`)
     return undefined
   }
   spinner.succeed()

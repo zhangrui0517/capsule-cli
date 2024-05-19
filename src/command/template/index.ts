@@ -9,8 +9,8 @@ import { TemplateCommandOption } from '../../types.js'
  */
 export function templateCommand (commandObj: Command) {
     commandObj.command('template')
-        .option('-t --template', 'Set template directory or absolute path')
-        .option('-c --config', 'Set config file name or absolute path')
+        .option('-t, --template <template>', 'Set template directory or absolute path')
+        .option('-c, --config <config>', 'Set config file name or absolute path')
         .description('Generate code template')
         .action(async (options: TemplateCommandOption) => {
             try {
