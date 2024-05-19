@@ -2,7 +2,7 @@
   "name": "capsule-cli",
   "version": "1.0.0",
   "description": "Generate project base code and custom template code",
-  "main": "index.js",
+  "main": "./lib/index.js",
   "type": "module",
   "scripts": {
     "build": "rimraf ./lib && tsc -p ./tsconfig.json",

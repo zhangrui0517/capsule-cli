@@ -170,12 +170,13 @@ export function getTemplateInfos (templateList: string[], currentPath: string, c
 export async function transformTsToJs(filePath: string) {
   const buildResult = await build({
     entryPoints: [filePath],
-    bundle: true,
     platform: 'node',
+    external: ['capsule-cli'],
+    bundle: true,
     write: false,
-    external: ['esbuild', 'inquirer'],
     format: 'esm',
     minify: true,
+    treeShaking: true
   })
   return buildResult.outputFiles[0].text
 }
@@ -389,19 +390,19 @@ export async function installNpmPackage (npmName: string, options?: {
     if(!isExistPackageJson) {
       await initPackage(installDir)
     }
-    const installResult = await execa('npm', ['install', `${npmName}@${version}`, ...commandProps], {
-      cwd: installDir
-    })
-    const { stderr } = installResult
-    if(stderr) {
+    try {
+      const installResult = await execa('npm', ['install', `${npmName}@${version}`, ...commandProps], {
+        cwd: installDir
+      })
       return {
-        error: stderr,
+        error: null,
+        data: installResult
+      }
+    } catch (err) {
+      return {
+        error: err,
         data: null
       }
-    }
-    return {
-      error: null,
-      data: installResult
     }
   }
   return {
@@ -419,58 +420,38 @@ export async function requestNpmPackage (npmName: string, options?: {
   const { version } = options || {}
   const tempDir = os.tmpdir()
   const cacheDir = path.resolve(tempDir, 'capsule-cli-cache')
-  const packePath = path.resolve(cacheDir, `./node_modules/${npmName}`)
+  await fse.ensureDir(cacheDir)
+  const packagePath = path.resolve(cacheDir, `./node_modules/${npmName}`)
   const spinner = ora('Start requesting npm template package').start()
-  try {
-    // Exist cache dir, if not exist, throw error to cache
-    fse.statSync(cacheDir)
+  if(fse.existsSync(packagePath)) {
     const packageJson = await fse.readJSON(path.resolve(cacheDir, './package.json'))
     const currentVersion = packageJson.dependencies[npmName]
     if(version && currentVersion !== version) {
-       const { error } = await installNpmPackage(npmName, {
+      const { error } = await installNpmPackage(npmName, {
         installDir: cacheDir,
         version
       })
       if(error) {
-        throw new Error(error)
+        spinner.fail(error)
+        return undefined
       }
-      spinner.succeed()
-      return packePath
     }
-    if(!version) {
-      // Check latest version
-      const lastVersion = await getLatestVersion(npmName)
-      if(lastVersion && currentVersion !== lastVersion) {
-        const { error } = await installNpmPackage(npmName, {
-          installDir: cacheDir
-        })
-        if(error) {
-          throw new Error(error)
-        }
-        spinner.succeed()
-        return packePath
-      }
-      if(!lastVersion) {
-        console.warn('Failed to obtain the latest version of the current template, currently using version is ', currentVersion)
-      }
-      spinner.warn()
-      return packePath
-    }
-    spinner.fail()
-    return null
-  } catch (e) {
-    fse.mkdirSync(cacheDir)
-    const { error } = await installNpmPackage(npmName, {
-      installDir: cacheDir
-    })
-    if(!error) {
-      spinner.succeed()
-      return packePath
-    }
-    console.error(error)
-    spinner.fail()
-    return null
+    spinner.succeed()
+    return packagePath
   }
+  !fse.existsSync(path.resolve(cacheDir, './package.json')) && initPackage(cacheDir)
+  const { error } = await installNpmPackage(npmName, {
+    installDir: cacheDir,
+    version
+  })
+  if(error) {
+    spinner.fail('Npm template download fail!')
+    debugger
+    console.error(error?.shot)
+    return undefined
+  }
+  spinner.succeed()
+  return packagePath
 }
 
 export async function getLatestVersion (npmName: string) {
