@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "checkJs": true,
     // 是否删除注释
     "removeComments": true,
     // 是否启用严格模式
@@ -28,7 +27,6 @@
       "dom"
     ],
     // 指定编译输出目录
-    // 此处设置为 ./dist，表示将编译后的代码输出到 dist 目录
     "outDir": "./lib",
     // 指定源代码目录
     // 此处设置为 ./src，表示源代码位于 src 目录
@@ -51,7 +49,9 @@
     // 强制文件名大小写一致
     "forceConsistentCasingInFileNames": true,
     /* 模块导入语句的解析 */
-    "moduleResolution": "Node"
+    "moduleResolution": "Node",
+    // 只生成声明文件，不生成JavaScript文件
+    "emitDeclarationOnly":  true
   },
   // 要包含的 TypeScript 文件
   "include": [
