@@ -1,6 +1,6 @@
 {
   "name": "capsule-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Generate project base code and custom template code",
   "main": "./lib/index.js",
   "type": "module",
