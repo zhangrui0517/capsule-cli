@@ -51,3 +51,6 @@ docs/
 examples/
 
 # 以及其他特定于项目的不需要发布的文件
+src
+esbuild.*
+tsconfig.json

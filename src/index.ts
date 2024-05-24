@@ -1,14 +1,21 @@
+import path from 'path'
 import { Command } from 'commander'
-import { templateCommand } from './command.js'
+import { templateCommand } from './command/index.js'
+import { requireFile, dirname } from './utils/index.js'
+import { defineConfig } from './utils/defineConfig.js'
 
 function runCli () {
+    const packageJson = requireFile(path.resolve(dirname(import.meta), '../package.json'))
+    const { version, name, description } = packageJson
     const mainCommand = new Command()
     mainCommand
-        .name('capsule-cli')
-        .description('CLI to some JavaScript string utilities')
-        .version('0.8.0')
+        .usage('capsule')
+        .name(name)
+        .description(description)
+        .version(version)
     templateCommand(mainCommand)
-    mainCommand.parse()
+    mainCommand.parse(process.argv)
 }
 
+export { defineConfig }
 export default runCli
