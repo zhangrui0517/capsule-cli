@@ -1,2 +1,2 @@
-export * from "./template/index.js"
-export * from "./base"
+export * from './template/index.js'
+export * from './base'

@@ -1,7 +1,7 @@
-import path from "node:path"
-import url from "node:url"
-import module from "node:module"
-import fse from "fs-extra"
+import path from 'node:path'
+import url from 'node:url'
+import module from 'node:module'
+import fse from 'fs-extra'
 
 /** __firename */
 export function filename(importMeta: Record<string, any>) {
@@ -19,7 +19,7 @@ export function requireFile(filePath: string) {
 
 /** Get root path */
 export function getRootPath() {
-	return path.resolve(dirname(import.meta), "../")
+	return path.resolve(dirname(import.meta), '../')
 }
 
 /** Generate unique string */
@@ -29,13 +29,13 @@ export function generateId(withTime = true) {
 
 export function isEsmFile(filePath) {
 	// 1. 检查文件扩展名是否为 .mjs
-	if (filePath.endsWith(".mjs")) {
+	if (filePath.endsWith('.mjs')) {
 		return true
 	}
 
 	// 2. 读取文件内容，检查是否包含 ESM 的导入语句
-	const content = fse.readFileSync(filePath, "utf-8")
-	if (content.includes("import") || content.includes("export")) {
+	const content = fse.readFileSync(filePath, 'utf-8')
+	if (content.includes('import') || content.includes('export')) {
 		return true
 	}
 
