@@ -54,7 +54,7 @@ examples/
 src
 esbuild.*
 tsconfig.json
-.commitlintrc.json
-.editorconfig
-.prettierignore
-.prettierrc
+./.commitlintrc.json
+./.editorconfig
+./.prettierignore
+./.prettierrc
