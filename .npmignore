@@ -42,7 +42,7 @@ node_modules/
 yarn-error.log
 yarn.lock
 npm-debug.log
-.prettierrc
+./.prettierrc
 .eslintcache
 .husky/
 
